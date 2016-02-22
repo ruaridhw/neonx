@@ -171,18 +171,19 @@ See `here <http://bit.ly/1fo5324>`_.
 
     if encoder is None:
         encoder = json.JSONEncoder()
-        
+
     if all((server_login, server_pwd)):
         from requests.auth import HTTPBasicAuth
         basicAuth = HTTPBasicAuth(server_login, server_pwd)
     else:
         basicAuth = None
-        
+
     all_server_urls = get_server_urls(server_url, auth=basicAuth)
     batch_url = all_server_urls['batch']
 
     data = generate_data(graph, edge_rel_name, label, encoder)
-    result = requests.post(batch_url, data=data, headers=HEADERS, auth=basicAuth)
+    result = requests.post(batch_url, data=data, headers=HEADERS,
+                           auth=basicAuth)
     check_exception(result)
     return result.json()
 
@@ -208,7 +209,7 @@ reference/classes.digraph.html>`_.
         basicAuth = HTTPBasicAuth(server_login, server_pwd)
     else:
         basicAuth = None
-        
+
     all_server_urls = get_server_urls(server_url, auth=basicAuth)
     batch_url = all_server_urls['batch']
 
@@ -237,4 +238,3 @@ reference/classes.digraph.html>`_.
         graph.add_edge(from_node_id, to_node_id, **properties)
 
     return graph
-
