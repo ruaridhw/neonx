@@ -72,14 +72,20 @@ def generate_data(graph, edge_rel_name, label, encoder):
     is_digraph = isinstance(graph, nx.DiGraph)
     entities = []
     nodes = {}
+    labels = {}
 
     for i, (node_name, properties) in enumerate(graph.nodes(data=True)):
         entities.append(get_node(i, properties))
         nodes[node_name] = i
+        if properties['label']:
+            labels[i] = properties['label']
 
     if label:
         for i in nodes.values():
             entities.append(get_label(i, label))
+    elif labels:
+        for i in nodes.values():
+            entities.append(get_label(i, labels[i]))
 
     for from_node, to_node, properties in graph.edges(data=True):
         edge = get_relationship(nodes[from_node], nodes[to_node],
