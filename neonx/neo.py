@@ -123,7 +123,7 @@ def check_exception(result):
     raise e
 
 
-def get_server_urls(server_url):
+def get_server_urls(server_url, **kwargs):
     """connects to the server with a GET request and returns its answer
     (e.g. a number of URLs of REST endpoints, the server version etc.)
     as a dictionary.
@@ -131,13 +131,13 @@ def get_server_urls(server_url):
     :param server_url: the URL of the Neo4j server
     :rtype: a dictionary of parameters of the Neo4j server
     """
-    result = requests.get(server_url)
+    result = requests.get(server_url, **kwargs)
     check_exception(result)
     return result.json()
 
 
 def write_to_neo(server_url, graph, edge_rel_name, label=None,
-                 encoder=None):
+                 encoder=None, server_login=None, server_pwd=None):
     """Write the `graph` as Geoff string. The edges between the nodes
     have relationship name `edge_rel_name`. The code
     below shows a simple example::
@@ -170,17 +170,26 @@ def write_to_neo(server_url, graph, edge_rel_name, label=None,
     :param optional label: It will add this label to the node. \
 See `here <http://bit.ly/1fo5324>`_.
     :param optional encoder: JSONEncoder object. Defaults to JSONEncoder.
+    :param server_login: login if server's authentification required
+    :param server_pwd: password if server's authentification required
     :rtype: A list of Neo4j created resources.
     """
 
     if encoder is None:
         encoder = json.JSONEncoder()
 
-    all_server_urls = get_server_urls(server_url)
+    if all((server_login, server_pwd)):
+        from requests.auth import HTTPBasicAuth
+        basicAuth = HTTPBasicAuth(server_login, server_pwd)
+    else:
+        basicAuth = None
+
+    all_server_urls = get_server_urls(server_url, auth=basicAuth)
     batch_url = all_server_urls['batch']
 
     data = generate_data(graph, edge_rel_name, label, encoder)
-    result = requests.post(batch_url, data=data, headers=HEADERS)
+    result = requests.post(batch_url, data=data, headers=HEADERS,
+                           auth=basicAuth)
     check_exception(result)
     return result.json()
 
@@ -188,18 +197,26 @@ See `here <http://bit.ly/1fo5324>`_.
 LABEL_QRY = """MATCH (a:{0})-[r]->(b:{1}) RETURN ID(a), r, ID(b);"""
 
 
-def get_neo_graph(server_url, label):
+def get_neo_graph(server_url, label, server_login=None, server_pwd=None):
     """Return a graph of all nodes with a given Neo4j label and edges between
     the same nodes.
 
     :param server_url: Server URL for the Neo4j server.
     :param label: The label to retrieve the nodes for.
+    :param server_login: login if server's authentification required
+    :param server_pwd: password if server's authentification required
     :rtype: A `Digraph \
 <http://networkx.github.io/documentation/latest/\
 reference/classes.digraph.html>`_.
     """
 
-    all_server_urls = get_server_urls(server_url)
+    if all((server_login, server_pwd)):
+        from requests.auth import HTTPBasicAuth
+        basicAuth = HTTPBasicAuth(server_login, server_pwd)
+    else:
+        basicAuth = None
+
+    all_server_urls = get_server_urls(server_url, auth=basicAuth)
     batch_url = all_server_urls['batch']
 
     data = [{"method": "GET", "to": '/label/{0}/nodes'.format(label),
@@ -208,7 +225,8 @@ reference/classes.digraph.html>`_.
              LABEL_QRY.format(label, label), "params": {}}},
             ]
 
-    result = requests.post(batch_url, data=json.dumps(data), headers=HEADERS)
+    result = requests.post(batch_url, data=json.dumps(data),
+                           headers=HEADERS, auth=basicAuth)
     check_exception(result)
 
     node_data, edge_date = result.json()
